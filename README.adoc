@@ -58,6 +58,18 @@ Netty can be used to directly host an `HttpHandler`, without requiring Spring Bo
 See link:src/main/kotlin/org/pedrofelix/examples/reactive/httphandler/UsingHttpHandler.kt[UsingHttpHandler.kt]
 for an example of how to create an `HttpHandler` and host it.
 
+## `WebHandler`
 
+A `WebHandler` differs from an `HttpHandler` in the following ways:
 
+- It is called at the end of a pipeline comprised of `WebFilter` and `WebExceptionHandler` instances.
+- Has access to a richer context, represented by `ServerWebExchange`, including:
+    * form data;
+    * request principal;
+    * exchange attributes set by filters.
 
+This pipeline is built using a `WebHttpHandlerBuilder` and implements the `HttpHandler` interface,
+meaning that it can be hosted like any other `HttpHandler`.
+
+See link:src/main/kotlin/org/pedrofelix/examples/reactive/webhandler/UsingWebHandler.kt[UsingWebHandler.kt]
+for an example of how to create and host a pipeline with a `WebHandler`, filters, and exception handlers.
