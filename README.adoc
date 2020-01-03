@@ -1,5 +1,5 @@
 :toc: macro
-:toc-title: Table of Contents
+:toc-title:
 :toclevels: 99
 
 # WebFlux with Kotlin by Example
@@ -48,6 +48,15 @@ Spring Boot requires a correctly annotated _application_ class to be passed to `
 class App
 ```
 This class can be used to contain _bean_ definitions.
+
+## `HttpHandler`
+
+https://github.com/spring-projects/spring-framework/blob/master/spring-web/src/main/java/org/springframework/http/server/reactive/HttpHandler.java[HttpHandler] seems to be the lowest common abstraction around the handling
+* of an HTTP exchange, playing a role similar to servlets in the old Spring MVC.
+Netty can be used to directly host an `HttpHandler`, without requiring Spring Boot or a Spring context.
+
+See link:src/main/kotlin/org/pedrofelix/examples/reactive/httphandler/UsingHttpHandler.kt[UsingHttpHandler.kt]
+for an example of how to create an `HttpHandler` and host it.
 
 
 
