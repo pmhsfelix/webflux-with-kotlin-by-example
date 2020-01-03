@@ -73,3 +73,38 @@ meaning that it can be hosted like any other `HttpHandler`.
 
 See link:src/main/kotlin/org/pedrofelix/examples/reactive/webhandler/UsingWebHandler.kt[UsingWebHandler.kt]
 for an example of how to create and host a pipeline with a `WebHandler`, filters, and exception handlers.
+
+## Router functions
+
+Router function allows the declarative and nested definition of handling functions associated to paths or other predicates.
+```
+router {
+    path("/examples").nest {
+        GET("/") { req ->
+            log.info("Request received: method={}, URI={}", req.method(), req.uri())
+            ok().bodyValue("Hello world, from /examples")
+        }
+        GET("/{id}") { req ->
+            val id = req.pathVariable("id")
+            log.info("Request received: method={}, URI={}, id={}",
+                    req.method(), req.uri(), id)
+            ok().bodyValue("Hello world, from /examples/{id}, with id=$id")
+        }
+    }
+}
+```
+
+The outer result is a `RouterFunction` which is an  interface with a `Mono<HandlerFunction<T>> route(ServerRequest request)`,
+i.e, it is something that given a request, asynchronously returns an handler function.
+
+Handling functions are functions from `ServerRequest` to `Mono<ServerResponse>`,
+i.e., `(ServerRequest) -> Mono<out ServerResponse>`.
+
+It is also possible to include filters into this _handling tree_, that _wrap_ the calls to the handlers.
+
+WebFlux also supports `suspend` functions, allowing handlers and filters to be written using
+Kotlin's coroutine style, instead of using reactive streams.
+In this case, an handler has the following signature: `suspend (ServerRequest) -> ServerResponse`.
+
+See link:src/main/kotlin/org/pedrofelix/examples/reactive/routerfunction/UsingRouterFunction.kt[UsingRouterFunction.kt]
+for an example.

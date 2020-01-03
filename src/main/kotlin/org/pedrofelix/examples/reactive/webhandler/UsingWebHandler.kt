@@ -106,7 +106,8 @@ fun main() {
             .port(8080)
             .handle(adapter)
             .bind()
-            .block().use { server ->
+            .block()
+            .use { server ->
                 log.info("server listening at {}", server?.address())
                 readLine()
             }
