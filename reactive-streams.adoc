@@ -1,0 +1,115 @@
+:toc: macro
+:toc-title:
+:toclevels: 99
+
+# Reactive streams
+
+This document contains a brief introduction to _reactive streams_.
+
+- A reactive stream represents a sequence of zero or more elements.
+    * A reactive stream may represent a sequence of elements (hot stream) or a _way to produce_ a sequence of elements (cold stream). This distinction will be clearer in the following.
+
+- A reactive stream is also known as an _observable_ or as a _publisher_.
+
+- A consumer of a reactive stream is also known as a _subscriber_.
+
+- A _publisher_ provides a push-based model for interested _consumers_ to access the elements.
+    * On pull-based models, a stream exposes methods that consumers call to retrieve the elements (e.g. `Iterable<T>` and `Iterator<T>`).
+    * As a push-based model, a _publisher provides a method for consumers to subscribe to the stream. Then, it will call the _consumer_ methods to push the elements.
+Notice the inversion of control: elements are passed as parameters for subscriber methods called by the publisher.
+
+- On the JVM (since JDK 9), a reactive stream is represented by the `java.util.concurrent.Flow.Publisher<T>` interface.
+    * This interface has a single method `subscribe`, receiving a `Flow.Subscriber<T>`.
+It is typically used to connect a subscriber (i.e. a consumer) to a publisher (i.e. a producer).
+    * The `Flow.Subscriber<T>` exposes the methods to where the _publisher_  _pushes_ the stream elements.
+        ** `onNext(item: T)` - used to push an element.
+        ** `onComplete​()` - used to signal the end of the stream.
+        ** `onError​(error: Throwable)` - used to signal the occurrence of an error (and also the end of the stream).
+    * The `Flow.Subscriber<T>` also exposes a `onSubscribe​(subscription: Flow.Subscription subscription)` method.
+This subscription can then be used by the subscriber to:
+        ** Inform that it does not want to receive more items (i.e unsubscribe)
+        ** Request more items (i.e. control back-pressure).
+
+- Beginning with JDK 9, the JVM platform defines interfaces to represent these concepts. However:
+    * It only defines interfaces and nothing more. So, to do anything meaningful with reactive streams,
+it is common to use libraries with concrete implementations (e.g. https://projectreactor.io[Reactor] or https://github.com/ReactiveX/RxJava)[RxJava 2]).
+    * Most of these libraries have JDK 8 as the minimum version (JDB 8 is still very popular), so they cannot directly use the `Flow.*` interfaces.
+Instead, they use interfaces from the https://github.com/reactive-streams/reactive-streams-jvm[`org.reactivestreams`] project, which are semantically equivalent.
+In addition they provide adaption libraries between these two reactive stream interfaces (e.g. https://github.com/reactor/reactor-core/blob/master/reactor-core/src/main/java/reactor/adapter/JdkFlowAdapter.java[`JdkFlowAdapter`]).
+
+- Consider the following example, where:
+    * A publisher is created from an array (`Flux` is a class from the Reactor library).
+    * A subscriber is created as an instance of an anonymous class.
+    * The subscriber is subscribed to the publisher
+
+[source,kotlin]
+----
+    @Test
+    fun `intro to reactive streams`() {
+
+        val thePublisher: Publisher<Int> = Flux.fromArray(arrayOf(1, 2, 3))
+        val theSubscriber: Subscriber<Int> = object : Subscriber<Int> {
+
+            override fun onSubscribe(subscription: Subscription) {
+                log.info("onSubscribe called, asking for 10 elements")
+                subscription.request(10)
+            }
+
+            override fun onNext(t: Int) {
+                log.info("onNext called")
+            }
+
+            override fun onError(t: Throwable) {
+                log.info("onError called")
+            }
+
+            override fun onComplete() {
+                log.info("onCompleted")
+            }
+        }
+
+        log.info("about to subscribe")
+        thePublisher.subscribe(theSubscriber)
+        log.info("subscribe done")
+    }
+----
+
+When ran, it produces the following log trace
+
+[source]
+----
+17:27:39.535 [      main] INFO  - about to subscribe
+17:27:39.542 [      main] INFO  - onSubscribe called, asking for 10 elements
+17:27:39.542 [      main] INFO  - onNext called
+17:27:39.542 [      main] INFO  - onNext called
+17:27:39.542 [      main] INFO  - onNext called
+17:27:39.545 [      main] INFO  - onCompleted
+17:27:39.545 [      main] INFO  - subscription done
+----
+
+    * When the subscribe method is called, the `onSubscribe` method is called with the `Subscription` object.
+The subscriber uses this objec to request 10 elements. Note that this request is non-blocking.
+    * As a consequence, the publisher pushes the `1,2,3` sequence into the subscriber by calling the `onNext` method for each one of these integers.
+    *  To signal the sequence end, the subscriber calls `onCompleted`.
+
+- The interesting part of reactive streams is not so much on these interfaces but on the composition model made available by reactive operators.
+    * Composition means that is is possible to start with a _publisher_, compose it with some processing step (e.g map each element into a `String` ) and obtain a new _publisher_ that represents the processed stream.
+    * This composition is done using operators.
+    * Notice that this _publisher_ composition is done even before the elements are available.
+
+
+[source, kotlin]
+----
+    @Test
+    fun `composition is the real deal`() {
+        val publisher0: Flux<Int> = Flux.fromArray(arrayOf(1, 2, 3))
+        val publisher1: Flux<String> = publisher0.map { it.toString() }
+        val publisher2: Mono<String> = publisher1.reduce { acc, elem -> "$acc, $elem" }
+
+        publisher2.subscribe { log.info("received $it") }
+    }
+----
+
+
+
+
